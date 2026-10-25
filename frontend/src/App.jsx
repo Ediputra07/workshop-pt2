@@ -15,7 +15,8 @@ import {
   ShieldAlert, 
   Award,
   Layers,
-  ChevronRight
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   getMataKuliah, 
@@ -37,6 +38,7 @@ export default function App() {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSks, setFilterSks] = useState('ALL');
+  const [filterDay, setFilterDay] = useState('ALL');
 
   // Notification Toast
   const [toast, setToast] = useState(null);
@@ -77,10 +79,33 @@ export default function App() {
   const currentTotalCredits = krsData?.total_credits || 0;
   const isLocked = krsData?.status && krsData.status !== 'DRAFT';
 
+  // Helper fungsi untuk mengecek apakah mata kuliah bentrok jadwal dengan yang sudah diambil
+  const getConflictCourse = (course) => {
+    if (takenCourseIds.has(course.id)) return null;
+    if (!course.day || !course.start_time || !course.end_time) return null;
+
+    const items = krsData?.items || [];
+    for (const item of items) {
+      if (item.day && item.day === course.day && item.start_time && item.end_time) {
+        const isOverlap = (course.start_time < item.end_time) && (course.end_time > item.start_time);
+        if (isOverlap) {
+          return item; // Mengembalikan item yang bentrok
+        }
+      }
+    }
+    return null;
+  };
+
   // Handler Tambah Mata Kuliah
   const handleAddCourse = async (course) => {
     if (isLocked) {
       showToast('KRS sudah diajukan dan terkunci. Tidak dapat menambah mata kuliah.', 'error');
+      return;
+    }
+
+    const conflict = getConflictCourse(course);
+    if (conflict) {
+      showToast(`Jadwal bentrok dengan mata kuliah ${conflict.name} pada ${conflict.schedule}!`, 'error');
       return;
     }
 
@@ -94,7 +119,6 @@ export default function App() {
       const res = await addKrsItem(course.id);
       if (res.success) {
         showToast(res.message, 'success');
-        // Refresh KRS
         const updatedKrs = await getKrs();
         if (updatedKrs.success) setKrsData(updatedKrs.data);
       }
@@ -177,8 +201,9 @@ export default function App() {
       (c.lecturer && c.lecturer.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCredits = filterSks === 'ALL' || c.credits.toString() === filterSks;
+    const matchesDay = filterDay === 'ALL' || c.day === filterDay;
 
-    return matchesSearch && matchesCredits;
+    return matchesSearch && matchesCredits && matchesDay;
   });
 
   // Status Badge Colors & Info
@@ -331,31 +356,53 @@ export default function App() {
                 </div>
 
                 {/* Filter and Search Bar */}
-                <div className="flex flex-col sm:flex-row gap-2.5 mb-4">
-                  <div className="relative grow">
+                <div className="flex flex-col gap-2.5 mb-4">
+                  <div className="relative">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Cari kode, nama MK, atau dosen..."
+                      placeholder="Cari kode, nama MK, jadwal, atau dosen..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50/50"
                     />
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                    {['ALL', '2', '3', '4'].map((sks) => (
-                      <button
-                        key={sks}
-                        onClick={() => setFilterSks(sks)}
-                        className={`px-3 py-2 text-xs font-semibold rounded-xl border transition ${
-                          filterSks === sks
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {sks === 'ALL' ? 'Semua SKS' : `${sks} SKS`}
-                      </button>
-                    ))}
+                  
+                  {/* Pills Filter SKS & Hari */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5 overflow-x-auto">
+                      <span className="text-[11px] font-semibold text-slate-400 mr-1">SKS:</span>
+                      {['ALL', '2', '3', '4'].map((sks) => (
+                        <button
+                          key={sks}
+                          onClick={() => setFilterSks(sks)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
+                            filterSks === sks
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {sks === 'ALL' ? 'Semua' : `${sks} SKS`}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 overflow-x-auto">
+                      <span className="text-[11px] font-semibold text-slate-400 mr-1">Hari:</span>
+                      {['ALL', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].map((day) => (
+                        <button
+                          key={day}
+                          onClick={() => setFilterDay(day)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
+                            filterDay === day
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {day === 'ALL' ? 'Semua' : day}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -368,8 +415,9 @@ export default function App() {
                   ) : (
                     filteredCourses.map((course) => {
                       const isTaken = takenCourseIds.has(course.id);
+                      const conflict = getConflictCourse(course);
                       const wouldExceedLimit = currentTotalCredits + course.credits > 24;
-                      const isDisabled = isLocked || isTaken || (wouldExceedLimit && !isTaken);
+                      const isDisabled = isLocked || isTaken || (wouldExceedLimit && !isTaken) || Boolean(conflict);
 
                       return (
                         <div
@@ -377,17 +425,25 @@ export default function App() {
                           className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                             isTaken
                               ? 'bg-indigo-50/40 border-indigo-200/80'
+                              : conflict
+                              ? 'bg-rose-50/30 border-rose-200'
                               : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
                           }`}
                         >
                           <div className="grow">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
                                 {course.code}
                               </span>
                               <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
                                 {course.credits} SKS
                               </span>
+                              {conflict && (
+                                <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-rose-500" />
+                                  Bentrok: {conflict.code}
+                                </span>
+                              )}
                             </div>
                             <h3 className="text-sm font-semibold text-slate-900 leading-snug">
                               {course.name}
@@ -404,6 +460,11 @@ export default function App() {
                                 </span>
                               )}
                             </div>
+                            {conflict && (
+                              <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                                Jadwal bertabrakan dengan {conflict.name} ({conflict.schedule})
+                              </p>
+                            )}
                           </div>
 
                           <div className="sm:self-center shrink-0">
@@ -427,6 +488,8 @@ export default function App() {
                                 title={
                                   isLocked
                                     ? 'KRS sudah dikunci'
+                                    : conflict
+                                    ? `Bentrok dengan ${conflict.name}`
                                     : wouldExceedLimit
                                     ? 'Akan melebihi batas 24 SKS'
                                     : 'Tambahkan ke KRS'
@@ -631,7 +694,7 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-3 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-          Aplikasi Demo Seminar AI-Assisted Fullstack Development &bull; Validasi SKS & Relasi Database SQLite
+          Aplikasi Demo Seminar AI-Assisted Fullstack Development &bull; Validasi SKS, Anti-Bentrok Jadwal, & Transaksi Database SQLite
         </div>
       </footer>
     </div>

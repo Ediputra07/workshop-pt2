@@ -14,6 +14,9 @@ class Course extends Model
         'name',
         'credits',
         'schedule',
+        'day',
+        'start_time',
+        'end_time',
         'lecturer',
     ];
 

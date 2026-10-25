@@ -26,11 +26,11 @@ class KrsApiTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'code', 'name', 'credits', 'schedule'],
+                    '*' => ['id', 'code', 'name', 'credits', 'schedule', 'day', 'start_time', 'end_time'],
                 ],
             ]);
 
-        $this->assertGreaterThanOrEqual(12, count($response->json('data')));
+        $this->assertGreaterThanOrEqual(13, count($response->json('data')));
     }
 
     public function test_can_get_krs_status()
@@ -66,31 +66,50 @@ class KrsApiTest extends TestCase
             ]);
     }
 
+    public function test_cannot_take_overlapping_schedule_courses()
+    {
+        // IF2101: Senin, 08:00 - 10:30
+        $course1 = Course::where('code', 'IF2101')->first();
+        // IF2114: Senin, 09:00 - 11:30 (overlap)
+        $conflictCourse = Course::where('code', 'IF2114')->first();
+
+        $this->assertNotNull($course1);
+        $this->assertNotNull($conflictCourse);
+
+        // Ambil MK pertama
+        $res1 = $this->postJson('/api/krs', ['course_id' => $course1->id]);
+        $res1->assertStatus(201);
+
+        // Ambil MK kedua yang jadwalnya overlap
+        $res2 = $this->postJson('/api/krs', ['course_id' => $conflictCourse->id]);
+        $res2->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+            ]);
+
+        $this->assertStringContainsString('Jadwal bentrok', $res2->json('message'));
+    }
+
     public function test_cannot_exceed_24_credits()
     {
         $courses = Course::all();
         $total = 0;
 
         foreach ($courses as $c) {
-            if ($total + $c->credits <= 24) {
-                $res = $this->postJson('/api/krs', ['course_id' => $c->id]);
-                $res->assertStatus(201);
+            $res = $this->postJson('/api/krs', ['course_id' => $c->id]);
+            if ($res->status() === 201) {
                 $total += $c->credits;
-            } else {
-                // Course yang membuat total > 24 wajib ditolak backend
-                $res = $this->postJson('/api/krs', ['course_id' => $c->id]);
-                $res->assertStatus(422)
-                    ->assertJson([
-                        'success' => false,
-                    ]);
-                break;
+            } elseif ($res->status() === 422) {
+                // Berhasil ditolak baik karena 24 sks atau schedule conflict
+                $this->assertFalse($res->json('success'));
             }
         }
+        $this->assertLessThanOrEqual(24, $total);
     }
 
     public function test_cannot_modify_krs_after_submitted()
     {
-        $course = Course::first();
+        $course = Course::where('code', 'IF2101')->first();
         $this->postJson('/api/krs', ['course_id' => $course->id]);
 
         // Ajukan KRS
@@ -98,7 +117,7 @@ class KrsApiTest extends TestCase
         $submitRes->assertStatus(200);
 
         // Coba tambah mata kuliah lain
-        $otherCourse = Course::where('id', '!=', $course->id)->first();
+        $otherCourse = Course::where('code', 'IF2103')->first();
         $addRes = $this->postJson('/api/krs', ['course_id' => $otherCourse->id]);
         $addRes->assertStatus(422);
 

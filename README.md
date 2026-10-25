@@ -7,17 +7,18 @@ Aplikasi demonstrasi seminar pengisian Kartu Rencana Studi (KRS) mahasiswa mengg
 ## 🚀 Fitur Utama & Validasi Bisnis
 
 1. **Katalog Mata Kuliah**:
-   - Memuat 13 mata kuliah awal dari database SQLite via seeder.
-   - Fitur pencarian real-time dan filter berdasarkan bobot SKS.
+   - Memuat 14 mata kuliah awal dari database SQLite via seeder.
+   - Fitur pencarian real-time dan multi-filter berdasarkan bobot SKS serta Hari Kuliah (Senin - Sabtu).
 2. **Validasi Bisnis Ketat di Backend**:
    - **Maksimal 24 SKS**: Sistem otomatis menolak penambahan jika akumulasi SKS melebihi 24.
    - **Anti Duplikasi**: Mata kuliah yang sama tidak dapat diambil dua kali.
+   - **Deteksi Bentrok Jadwal (Schedule Conflict Detection)**: Menolak pengambilan mata kuliah bila hari dan rentang jamnya saling bertabrakan dengan mata kuliah yang sudah ada di KRS.
    - **Kunci KRS**: Setelah diajukan (*SUBMITTED* / *APPROVED*), KRS terkunci dan tidak dapat diubah (mutasi ditolak backend).
-   - **Database Transaction (`DB::transaction`)**: Menjamin konsistensi data saat penambahan, penghapusan, dan pengajuan KRS.
+   - **Database Transaction (`DB::transaction`)**: Menjamin konsistensi data secara atomik saat penambahan, penghapusan, dan pengajuan KRS.
 3. **Fitur Demo Seminar**:
    - **Simulasi Setujui PA**: Mengubah status pengajuan menjadi `APPROVED` secara instan untuk kebutuhan presentasi.
    - **Reset Demo Data**: Mengosongkan draft kembali ke kondisi awal kapan saja.
-   - **Loading state & toast notification**: Feedback interaktif saat aksi berhasil maupun gagal.
+   - **Loading state & toast notification**: Feedback visual interaktif saat aksi berhasil maupun gagal.
 
 ---
 
@@ -27,22 +28,22 @@ Aplikasi demonstrasi seminar pengisian Kartu Rencana Studi (KRS) mahasiswa mengg
 workshop-pt2/
 ├── backend/                  # Laravel 12 API + SQLite
 │   ├── app/
-│   │   ├── Http/Controllers/Api/KrsController.php  # Logic & Validasi Bisnis
+│   │   ├── Http/Controllers/Api/KrsController.php  # Logic & Validasi Bisnis (24 SKS & Bentrok)
 │   │   └── Models/                                 # Course, KrsSubmission, KrsItem
 │   ├── database/
 │   │   ├── database.sqlite                         # File SQLite Database
-│   │   ├── migrations/                             # Skema tabel
-│   │   └── seeders/DatabaseSeeder.php              # 13 Mata Kuliah & 1 Mahasiswa Demo
+│   │   ├── migrations/                             # Skema tabel (termasuk day, start_time, end_time)
+│   │   └── seeders/DatabaseSeeder.php              # 14 Mata Kuliah & 1 Mahasiswa Demo
 │   ├── routes/api.php                              # REST API endpoints
-│   └── tests/Feature/KrsApiTest.php                # Automated business rule tests
+│   └── tests/Feature/KrsApiTest.php                # Automated business rule tests (6 passed)
 ├── frontend/                 # React 19 + Vite + Tailwind CSS v4
 │   ├── src/
 │   │   ├── services/api.js                         # Axios API Client
-│   │   ├── App.jsx                                 # Dashboard KRS & Katalog Split View
+│   │   ├── App.jsx                                 # Dashboard KRS & Katalog Split View (Visual Conflict Alert)
 │   │   └── index.css                               # Tailwind CSS Entry
 │   └── vite.config.js                              # Proxy ke Laravel Backend
 ├── package.json              # Helper script root
-├── prd.md                    # PRD Dokumen Spesifikasi
+├── prd.md                    # PRD Dokumen Spesifikasi Terkini
 └── README.md
 ```
 
@@ -60,7 +61,7 @@ workshop-pt2/
 
 ### 1. Backend Setup (Laravel 12 + SQLite)
 
-Buka terminal pertama di root folder proyek:
+Buka terminal di folder backend:
 
 ```bash
 cd backend
@@ -84,14 +85,14 @@ Backend API akan aktif di `http://127.0.0.1:8000`.
 
 ### 2. Frontend Setup (React + Vite + Tailwind)
 
-Buka terminal kedua di root folder proyek:
+Buka terminal di folder frontend:
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Buka browser Anda di `http://localhost:5173`. Frontend sudah dilengkapi proxy otomatis ke backend Laravel (`http://127.0.0.1:8000/api`).
+Buka browser Anda di `http://localhost:5173` (atau port yang tampil di terminal).
 
 ---
 
@@ -104,10 +105,11 @@ cd backend
 php artisan test --filter=KrsApiTest
 ```
 
-**Semua skenario pengujian**:
+**Semua 6 skenario pengujian**:
 - `can get mata kuliah catalog`
 - `can get krs status`
 - `cannot take duplicate course`
+- `cannot take overlapping schedule courses` *(Baru)*
 - `cannot exceed 24 credits`
 - `cannot modify krs after submitted`
 
@@ -117,7 +119,7 @@ php artisan test --filter=KrsApiTest
 
 | Method | Endpoint | Keterangan |
 | :--- | :--- | :--- |
-| `GET` | `/api/mata-kuliah` | Mengambil seluruh katalog mata kuliah |
+| `GET` | `/api/mata-kuliah` | Mengambil seluruh katalog mata kuliah beserta hari dan jam |
 | `GET` | `/api/krs` | Mengambil data mahasiswa, daftar MK terpilih, dan total SKS |
 | `POST` | `/api/krs` | Menambahkan mata kuliah ke KRS (`{ "course_id": 1 }`) |
 | `DELETE` | `/api/krs/{id}` | Menghapus mata kuliah dari KRS |

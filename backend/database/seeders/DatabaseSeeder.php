@@ -30,6 +30,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Pemrograman Berorientasi Objek',
                 'credits' => 3,
                 'schedule' => 'Senin, 08:00 - 10:30',
+                'day' => 'Senin',
+                'start_time' => '08:00',
+                'end_time' => '10:30',
                 'lecturer' => 'Dr. Eng. Ir. Hendra Gunawan, M.T.'
             ],
             [
@@ -37,13 +40,30 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Struktur Data & Algoritma',
                 'credits' => 4,
                 'schedule' => 'Senin, 13:00 - 16:20',
+                'day' => 'Senin',
+                'start_time' => '13:00',
+                'end_time' => '16:20',
                 'lecturer' => 'Siti Nurhaliza, S.Kom., M.Cs.'
+            ],
+            // Mata kuliah yang sengaja bentrok dengan IF2101 (Senin 09:00 - 11:30) untuk bahan demo
+            [
+                'code' => 'IF2114',
+                'name' => 'Pengolahan Citra Digital (Kelas B)',
+                'credits' => 3,
+                'schedule' => 'Senin, 09:00 - 11:30',
+                'day' => 'Senin',
+                'start_time' => '09:00',
+                'end_time' => '11:30',
+                'lecturer' => 'Dr. Ahmad Dahlan, S.Si., M.T.'
             ],
             [
                 'code' => 'IF2103',
                 'name' => 'Basis Data Lanjutan',
                 'credits' => 3,
                 'schedule' => 'Selasa, 09:30 - 12:00',
+                'day' => 'Selasa',
+                'start_time' => '09:30',
+                'end_time' => '12:00',
                 'lecturer' => 'Bambang Sudarsono, M.Kom.'
             ],
             [
@@ -51,6 +71,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Rekayasa Perangkat Lunak',
                 'credits' => 3,
                 'schedule' => 'Selasa, 13:30 - 16:00',
+                'day' => 'Selasa',
+                'start_time' => '13:30',
+                'end_time' => '16:00',
                 'lecturer' => 'Dewi Sartika, S.T., M.T.'
             ],
             [
@@ -58,6 +81,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Pemrograman Web Fullstack',
                 'credits' => 4,
                 'schedule' => 'Rabu, 08:00 - 11:20',
+                'day' => 'Rabu',
+                'start_time' => '08:00',
+                'end_time' => '11:20',
                 'lecturer' => 'Rian Pratama, M.Kom.'
             ],
             [
@@ -65,6 +91,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Jaringan Komputer',
                 'credits' => 3,
                 'schedule' => 'Rabu, 13:00 - 15:30',
+                'day' => 'Rabu',
+                'start_time' => '13:00',
+                'end_time' => '15:30',
                 'lecturer' => 'Agus Priyono, S.Kom., M.T.'
             ],
             [
@@ -72,6 +101,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Kecerdasan Buatan & Machine Learning',
                 'credits' => 3,
                 'schedule' => 'Kamis, 08:00 - 10:30',
+                'day' => 'Kamis',
+                'start_time' => '08:00',
+                'end_time' => '10:30',
                 'lecturer' => 'Prof. Dr. Ir. Wahyu Wibowo'
             ],
             [
@@ -79,6 +111,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Sistem Operasi Modern',
                 'credits' => 3,
                 'schedule' => 'Kamis, 10:45 - 13:15',
+                'day' => 'Kamis',
+                'start_time' => '10:45',
+                'end_time' => '13:15',
                 'lecturer' => 'Eko Prasetyo, M.T.'
             ],
             [
@@ -86,6 +121,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Keamanan Siber & Kriptografi',
                 'credits' => 3,
                 'schedule' => 'Kamis, 14:00 - 16:30',
+                'day' => 'Kamis',
+                'start_time' => '14:00',
+                'end_time' => '16:30',
                 'lecturer' => 'Rahmat Hidayat, M.Kom., CEH'
             ],
             [
@@ -93,6 +131,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Interaksi Manusia dan Komputer (UI/UX)',
                 'credits' => 2,
                 'schedule' => 'Jumat, 08:00 - 09:40',
+                'day' => 'Jumat',
+                'start_time' => '08:00',
+                'end_time' => '09:40',
                 'lecturer' => 'Annisa Permata, S.Ds., M.Sn.'
             ],
             [
@@ -100,6 +141,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Cloud Computing & DevOps',
                 'credits' => 3,
                 'schedule' => 'Jumat, 13:30 - 16:00',
+                'day' => 'Jumat',
+                'start_time' => '13:30',
+                'end_time' => '16:00',
                 'lecturer' => 'Dimas Wicaksono, S.Kom., AWS-CA'
             ],
             [
@@ -107,6 +151,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Etika Profesi & Kapita Selekta TI',
                 'credits' => 2,
                 'schedule' => 'Sabtu, 09:00 - 10:40',
+                'day' => 'Sabtu',
+                'start_time' => '09:00',
+                'end_time' => '10:40',
                 'lecturer' => 'Dr. H. Mulyadi, M.Hum.'
             ],
             [
@@ -114,6 +161,9 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Mobile Application Development',
                 'credits' => 3,
                 'schedule' => 'Sabtu, 11:00 - 13:30',
+                'day' => 'Sabtu',
+                'start_time' => '11:00',
+                'end_time' => '13:30',
                 'lecturer' => 'Fajar Nugraha, M.Kom.'
             ],
         ];

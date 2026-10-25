@@ -82,6 +82,9 @@ class KrsController extends Controller
                         'name' => $item->course->name,
                         'credits' => $item->course->credits,
                         'schedule' => $item->course->schedule,
+                        'day' => $item->course->day,
+                        'start_time' => $item->course->start_time,
+                        'end_time' => $item->course->end_time,
                         'lecturer' => $item->course->lecturer,
                         'created_at' => $item->created_at,
                     ];
@@ -129,7 +132,6 @@ class KrsController extends Controller
             $targetCourse = Course::findOrFail($validated['course_id']);
 
             // 3. Validasi: Total SKS maksimal 24
-            // Hitung total SKS terkini dari database
             $currentCredits = KrsItem::where('krs_submission_id', $submission->id)
                 ->join('courses', 'krs_items.course_id', '=', 'courses.id')
                 ->sum('courses.credits');
@@ -141,6 +143,27 @@ class KrsController extends Controller
                     'success' => false,
                     'message' => "Gagal menambahkan mata kuliah. Total SKS akan menjadi {$newTotal} SKS (Batas maksimal adalah 24 SKS).",
                 ], 422);
+            }
+
+            // 4. Validasi: Deteksi bentrok jadwal kuliah (Schedule Conflict Detection)
+            if ($targetCourse->day && $targetCourse->start_time && $targetCourse->end_time) {
+                $existingItems = KrsItem::where('krs_submission_id', $submission->id)
+                    ->with('course')
+                    ->get();
+
+                foreach ($existingItems as $item) {
+                    $c = $item->course;
+                    if ($c && $c->day === $targetCourse->day && $c->start_time && $c->end_time) {
+                        // Cek rentang waktu bertabrakan: (startA < endB) && (endA > startB)
+                        $isOverlap = ($targetCourse->start_time < $c->end_time) && ($targetCourse->end_time > $c->start_time);
+                        if ($isOverlap) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => "Jadwal bentrok dengan mata kuliah {$c->name} ({$c->code}) pada {$c->schedule}.",
+                            ], 422);
+                        }
+                    }
+                }
             }
 
             // Tambahkan item KRS
