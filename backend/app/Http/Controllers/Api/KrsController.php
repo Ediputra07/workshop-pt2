@@ -29,16 +29,21 @@ class KrsController extends Controller
 
     /**
      * GET /api/mata-kuliah
-     * Daftar katalog mata kuliah yang tersedia.
+     * Daftar katalog mata kuliah yang tersedia (otomatis seed jika kosong).
      */
     public function getMataKuliah()
     {
+        if (Course::count() === 0) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed');
+        }
+
         $courses = Course::orderBy('code')->get();
         return response()->json([
             'success' => true,
             'data' => $courses,
         ]);
     }
+
 
     /**
      * GET /api/krs
