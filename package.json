@@ -1,0 +1,14 @@
+{
+  "name": "workshop-pt2-mini-krs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mini KRS Mahasiswa Fullstack Demo (Laravel 12 + SQLite + React Vite + Tailwind)",
+  "scripts": {
+    "install:all": "npm --prefix frontend install && cd backend && composer install",
+    "backend:migrate": "cd backend && php artisan migrate:fresh --seed",
+    "backend:dev": "cd backend && php artisan serve --port=8000",
+    "backend:test": "cd backend && php artisan test",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
+  }
+}
