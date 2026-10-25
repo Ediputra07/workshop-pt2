@@ -44,6 +44,7 @@ class KrsApiTest extends TestCase
                     'student_name' => 'Ahmad Fauzi (Mahasiswa Demo)',
                     'status' => 'DRAFT',
                     'total_credits' => 0,
+                    'min_credits' => 12,
                     'max_credits' => 24,
                 ],
             ]);
@@ -100,29 +101,70 @@ class KrsApiTest extends TestCase
             if ($res->status() === 201) {
                 $total += $c->credits;
             } elseif ($res->status() === 422) {
-                // Berhasil ditolak baik karena 24 sks atau schedule conflict
                 $this->assertFalse($res->json('success'));
             }
         }
         $this->assertLessThanOrEqual(24, $total);
     }
 
-    public function test_cannot_modify_krs_after_submitted()
+    public function test_cannot_submit_krs_below_12_credits()
     {
+        // Ambil hanya 1 mata kuliah (3 SKS)
         $course = Course::where('code', 'IF2101')->first();
         $this->postJson('/api/krs', ['course_id' => $course->id]);
+
+        // Coba ajukan saat baru 3 SKS (wajib ditolak)
+        $submitRes = $this->postJson('/api/krs/ajukan');
+        $submitRes->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+            ]);
+
+        $this->assertStringContainsString('minimal 12 SKS', $submitRes->json('message'));
+    }
+
+    public function test_can_submit_krs_when_credits_at_least_12()
+    {
+        // Ambil mata kuliah non-bentrok sampai >= 12 SKS
+        // IF2101 (3 SKS, Senin), IF2102 (4 SKS, Senin siang), IF2103 (3 SKS, Selasa), IF2104 (3 SKS, Selasa siang) -> Total 13 SKS
+        $codes = ['IF2101', 'IF2102', 'IF2103', 'IF2104'];
+        foreach ($codes as $code) {
+            $c = Course::where('code', $code)->first();
+            $this->postJson('/api/krs', ['course_id' => $c->id])->assertStatus(201);
+        }
+
+        // Sekarang ajukan KRS
+        $submitRes = $this->postJson('/api/krs/ajukan');
+        $submitRes->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'status' => 'SUBMITTED',
+                ],
+            ]);
+    }
+
+    public function test_cannot_modify_krs_after_submitted()
+    {
+        // Ambil >= 12 SKS agar bisa diajukan
+        $codes = ['IF2101', 'IF2102', 'IF2103', 'IF2104'];
+        foreach ($codes as $code) {
+            $c = Course::where('code', $code)->first();
+            $this->postJson('/api/krs', ['course_id' => $c->id]);
+        }
 
         // Ajukan KRS
         $submitRes = $this->postJson('/api/krs/ajukan');
         $submitRes->assertStatus(200);
 
         // Coba tambah mata kuliah lain
-        $otherCourse = Course::where('code', 'IF2103')->first();
+        $otherCourse = Course::where('code', 'IF2105')->first();
         $addRes = $this->postJson('/api/krs', ['course_id' => $otherCourse->id]);
         $addRes->assertStatus(422);
 
-        // Coba hapus mata kuliah
-        $deleteRes = $this->deleteJson('/api/krs/' . $course->id);
+        // Coba hapus salah satu mata kuliah
+        $courseToDelete = Course::where('code', 'IF2101')->first();
+        $deleteRes = $this->deleteJson('/api/krs/' . $courseToDelete->id);
         $deleteRes->assertStatus(422);
     }
 }

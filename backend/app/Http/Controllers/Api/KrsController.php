@@ -72,6 +72,7 @@ class KrsController extends Controller
                 'nim' => $submission->nim,
                 'status' => $submission->status,
                 'total_credits' => $totalCredits,
+                'min_credits' => 12,
                 'max_credits' => 24,
                 'submitted_at' => $submission->submitted_at,
                 'items' => $items->map(function ($item) {
@@ -240,7 +241,7 @@ class KrsController extends Controller
 
     /**
      * POST /api/krs/ajukan
-     * Ajukan KRS ke dosen PA.
+     * Ajukan KRS ke dosen PA (wajib minimal 12 SKS).
      */
     public function ajukanKrs()
     {
@@ -254,14 +255,27 @@ class KrsController extends Controller
                 ], 422);
             }
 
-            $itemCount = KrsItem::where('krs_submission_id', $submission->id)->count();
-            if ($itemCount === 0) {
+            // Hitung total SKS terkini
+            $currentCredits = KrsItem::where('krs_submission_id', $submission->id)
+                ->join('courses', 'krs_items.course_id', '=', 'courses.id')
+                ->sum('courses.credits');
+
+            if ($currentCredits === 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'KRS masih kosong. Silakan ambil minimal 1 mata kuliah sebelum mengajukan.',
+                    'message' => 'KRS masih kosong. Silakan ambil mata kuliah terlebih dahulu.',
                 ], 422);
             }
 
+            // Validasi batas minimum 12 SKS
+            if ($currentCredits < 12) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Beban studi belum memenuhi syarat minimal 12 SKS (Saat ini: {$currentCredits} SKS). Silakan tambah mata kuliah lagi sebelum mengajukan.",
+                ], 422);
+            }
+
+            $submission->total_credits = $currentCredits;
             $submission->status = 'SUBMITTED';
             $submission->submitted_at = now();
             $submission->save();
@@ -271,6 +285,7 @@ class KrsController extends Controller
                 'message' => 'KRS berhasil diajukan ke Dosen Pembimbing Akademik! Pengisian KRS sekarang terkunci.',
                 'data' => [
                     'status' => $submission->status,
+                    'total_credits' => $submission->total_credits,
                     'submitted_at' => $submission->submitted_at,
                 ],
             ]);

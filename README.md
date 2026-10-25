@@ -10,7 +10,7 @@ Aplikasi demonstrasi seminar pengisian Kartu Rencana Studi (KRS) mahasiswa mengg
    - Memuat 14 mata kuliah awal dari database SQLite via seeder.
    - Fitur pencarian real-time dan multi-filter berdasarkan bobot SKS serta Hari Kuliah (Senin - Sabtu).
 2. **Validasi Bisnis Ketat di Backend**:
-   - **Maksimal 24 SKS**: Sistem otomatis menolak penambahan jika akumulasi SKS melebihi 24.
+   - **Rentang Beban Studi (12 - 24 SKS)**: Sistem menolak penambahan jika melebihi 24 SKS, serta menolak pengajuan ke PA jika belum mencapai batas minimal 12 SKS.
    - **Anti Duplikasi**: Mata kuliah yang sama tidak dapat diambil dua kali.
    - **Deteksi Bentrok Jadwal (Schedule Conflict Detection)**: Menolak pengambilan mata kuliah bila hari dan rentang jamnya saling bertabrakan dengan mata kuliah yang sudah ada di KRS.
    - **Kunci KRS**: Setelah diajukan (*SUBMITTED* / *APPROVED*), KRS terkunci dan tidak dapat diubah (mutasi ditolak backend).
@@ -18,7 +18,9 @@ Aplikasi demonstrasi seminar pengisian Kartu Rencana Studi (KRS) mahasiswa mengg
 3. **Cetak / Export Lembar KRS Resmi (Print to PDF)**:
    - Preview lembar KRS berstandar akademik lengkap dengan kop resmi universitas, data mahasiswa, tabel mata kuliah, stempel digital, dan kolom tanda tangan Dosen PA.
    - Desain cetak responsif menggunakan *print stylesheet* (`@media print`) sehingga langsung siap cetak atau simpan sebagai file PDF tanpa gangguan elemen dashboard.
-4. **Fitur Demo Seminar**:
+4. **Keamanan API & Throttling**:
+   - Dilengkapi rate limiting middleware Laravel (`throttle:60,1`) pada endpoint mutasi untuk mencegah flooding dan serangan *brute-force request*.
+5. **Fitur Demo Seminar**:
    - **Simulasi Setujui PA**: Mengubah status pengajuan menjadi `APPROVED` secara instan untuk kebutuhan presentasi.
    - **Reset Demo Data**: Mengosongkan draft kembali ke kondisi awal kapan saja.
    - **Loading state & toast notification**: Feedback visual interaktif saat aksi berhasil maupun gagal.
@@ -31,14 +33,14 @@ Aplikasi demonstrasi seminar pengisian Kartu Rencana Studi (KRS) mahasiswa mengg
 workshop-pt2/
 ├── backend/                  # Laravel 12 API + SQLite
 │   ├── app/
-│   │   ├── Http/Controllers/Api/KrsController.php  # Logic & Validasi Bisnis (24 SKS & Bentrok)
+│   │   ├── Http/Controllers/Api/KrsController.php  # Logic & Validasi Bisnis (12-24 SKS & Bentrok)
 │   │   └── Models/                                 # Course, KrsSubmission, KrsItem
 │   ├── database/
 │   │   ├── database.sqlite                         # File SQLite Database
 │   │   ├── migrations/                             # Skema tabel (termasuk day, start_time, end_time)
 │   │   └── seeders/DatabaseSeeder.php              # 14 Mata Kuliah & 1 Mahasiswa Demo
-│   ├── routes/api.php                              # REST API endpoints
-│   └── tests/Feature/KrsApiTest.php                # Automated business rule tests (6 passed)
+│   ├── routes/api.php                              # REST API endpoints + Rate Limiting Throttling
+│   └── tests/Feature/KrsApiTest.php                # Automated business rule tests (8 passed)
 ├── frontend/                 # React 19 + Vite + Tailwind CSS v4
 │   ├── src/
 │   │   ├── components/
@@ -110,23 +112,25 @@ cd backend
 php artisan test --filter=KrsApiTest
 ```
 
-**Semua 6 skenario pengujian**:
+**Semua 8 skenario pengujian**:
 - `can get mata kuliah catalog`
 - `can get krs status`
 - `cannot take duplicate course`
 - `cannot take overlapping schedule courses`
 - `cannot exceed 24 credits`
+- `cannot submit krs below 12 credits` *(Baru)*
+- `can submit krs when credits at least 12` *(Baru)*
 - `cannot modify krs after submitted`
 
 ---
 
 ## 🌐 Daftar Endpoint REST API
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Proteksi & Keterangan |
 | :--- | :--- | :--- |
 | `GET` | `/api/mata-kuliah` | Mengambil seluruh katalog mata kuliah beserta hari dan jam |
-| `GET` | `/api/krs` | Mengambil data mahasiswa, daftar MK terpilih, dan total SKS |
-| `POST` | `/api/krs` | Menambahkan mata kuliah ke KRS (`{ "course_id": 1 }`) |
-| `DELETE` | `/api/krs/{id}` | Menghapus mata kuliah dari KRS |
-| `POST` | `/api/krs/ajukan` | Mengajukan KRS ke Dosen PA (mengunci KRS) |
-| `POST` | `/api/krs/reset` | Mereset KRS demo atau simulasi approval Dosen PA |
+| `GET` | `/api/krs` | Mengambil data mahasiswa, daftar MK terpilih, dan batas min/max SKS |
+| `POST` | `/api/krs` | `throttle:60,1` &bull; Menambahkan mata kuliah ke KRS |
+| `DELETE` | `/api/krs/{id}` | `throttle:60,1` &bull; Menghapus mata kuliah dari KRS |
+| `POST` | `/api/krs/ajukan` | `throttle:60,1` &bull; Mengajukan KRS (**Wajib Min. 12 SKS**) |
+| `POST` | `/api/krs/reset` | `throttle:60,1` &bull; Mereset KRS demo atau simulasi approval |

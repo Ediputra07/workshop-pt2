@@ -10,7 +10,8 @@
 
 Aplikasi **Mini KRS Mahasiswa** dirancang khusus untuk demonstrasi alur pengembangan aplikasi fullstack modern berbantuan AI (*AI-assisted fullstack development*). Sistem ini mensimulasikan proses pengisian Kartu Rencana Studi (KRS) mahasiswa dengan fokus pada:
 - Kejelasan arsitektur fullstack dan pemisahan *concern* (Frontend React, Backend API Laravel, Database SQLite).
-- Implementasi *business logic* yang ketat (validasi batas maksimal 24 SKS & deteksi bentrok jadwal).
+- Implementasi *business logic* yang ketat (beban studi 12 - 24 SKS & deteksi bentrok jadwal kuliah).
+- Pengamanan REST API (*Rate Limiting Throttling*).
 - Kelengkapan siklus akademik (pengisian draft -> pengajuan ke PA -> approval -> cetak slip KRS resmi).
 - Kemudahan demonstrasi seminar (tersedia fitur simulasi approval dosen PA dan reset data demo).
 
@@ -32,12 +33,13 @@ Aplikasi **Mini KRS Mahasiswa** dirancang khusus untuk demonstrasi alur pengemba
   - `[AC-2.2]` Tombol **"Hapus/Batal"** mengeluarkan mata kuliah dari draft KRS.
   - `[AC-2.3]` Mata kuliah yang sama tidak dapat diambil dua kali (*duplicate check*).
 
-### F3: Validasi Batas Maksimal SKS (Maks 24 SKS)
-* **Deskripsi**: Menghitung akumulasi total SKS secara real-time dan mencegah penambahan jika melebihi batas 24 SKS.
+### F3: Validasi Batas Rentang Beban Studi (Min 12 SKS, Maks 24 SKS)
+* **Deskripsi**: Menghitung akumulasi total SKS secara real-time dan memastikan syarat beban studi terpenuhi.
 * **Acceptance Criteria**:
-  - `[AC-3.1]` Menampilkan counter total SKS terpilih (format: `X / 24 SKS`) dengan indikator progress bar visual.
-  - `[AC-3.2]` Di sisi Frontend, tombol "Ambil" otomatis disabled atau menampilkan alert error jika penambahan MK membuat total SKS > 24.
-  - `[AC-3.3]` Di sisi Backend, request penambahan MK ditolak dengan kode HTTP `422 Unprocessable Entity` jika total SKS melampaui 24.
+  - `[AC-3.1]` Menampilkan counter total SKS terpilih (format: `X / 24 SKS`) dengan indikator progress bar dan penanda syarat minimum 12 SKS.
+  - `[AC-3.2]` Di sisi Backend, request penambahan MK ditolak (`422`) jika total SKS melampaui 24 SKS.
+  - `[AC-3.3]` Di sisi Backend, request pengajuan KRS (`POST /api/krs/ajukan`) ditolak (`422`) jika total SKS belum mencapai batas minimal 12 SKS.
+  - `[AC-3.4]` Tombol "Ajukan KRS" di Frontend otomatis nonaktif dan menampilkan sisa SKS yang dibutuhkan bila total < 12 SKS.
 
 ### F4: Validasi Deteksi Bentrok Jadwal Kuliah (Schedule Conflict Detection)
 * **Deskripsi**: Mencegah mahasiswa mengambil dua atau lebih mata kuliah yang jadwalnya saling tumpang tindih (*overlapping*).
@@ -49,7 +51,7 @@ Aplikasi **Mini KRS Mahasiswa** dirancang khusus untuk demonstrasi alur pengemba
 ### F5: Simpan & Status Pengajuan KRS
 * **Deskripsi**: Menyimpan draft KRS ke database dan mengajukannya untuk disetujui Dosen Pembimbing Akademik (PA).
 * **Acceptance Criteria**:
-  - `[AC-5.1]` Terdapat tombol aksi **"Ajukan KRS ke Dosen PA"**.
+  - `[AC-5.1]` Terdapat tombol aksi **"Ajukan KRS ke Dosen PA"** (aktif jika SKS >= 12).
   - `[AC-5.2]` Status pengajuan memiliki 3 kondisi:
     - `DRAFT`: Mahasiswa bebas menambah dan menghapus mata kuliah.
     - `SUBMITTED`: Menunggu persetujuan Dosen PA; daftar KRS terkunci (*read-only*).
@@ -64,6 +66,11 @@ Aplikasi **Mini KRS Mahasiswa** dirancang khusus untuk demonstrasi alur pengemba
   - `[AC-6.1]` Terdapat tombol **"Cetak Lembar KRS Resmi (PDF)"** yang aktif saat mata kuliah telah terisi/disetujui.
   - `[AC-6.2]` Menampilkan modal dokumen siap cetak berformat A4 dengan kop resmi kampus dan tanda tangan Dosen PA.
   - `[AC-6.3]` Menggunakan print stylesheet (`@media print`) sehingga browser mencetak dokumen bersih tanpa navbar atau kontrol dashboard.
+
+### F7: Keamanan API & Throttling
+* **Deskripsi**: Mencegah serangan spam / brute-force pada endpoint mutasi KRS.
+* **Acceptance Criteria**:
+  - `[AC-7.1]` Menerapkan middleware Laravel `throttle:60,1` (maksimal 60 request per menit per client) pada endpoint mutasi data.
 
 ---
 
@@ -120,11 +127,11 @@ CREATE TABLE krs_items (
 
 Base URL: `/api`
 
-| Method | Endpoint | Deskripsi | Status Sukses | Validasi Bisnis yang Dijamin |
+| Method | Endpoint | Deskripsi | Status Sukses | Proteksi / Validasi Bisnis |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/mata-kuliah` | Ambil katalog mata kuliah lengkap | `200 OK` | Menyertakan hari dan rentang jam terstruktur |
-| `GET` | `/krs` | Ambil data KRS aktif, total SKS & daftar MK terpilih | `200 OK` | Menghitung otomatis total SKS terkini |
-| `POST` | `/krs` | Tambah MK ke draft KRS | `201 Created` | Kunci Draft, Anti-Duplikat, Maks 24 SKS, Anti-Bentrok Jadwal |
-| `DELETE` | `/krs/{id}` | Hapus MK dari draft KRS | `200 OK` | Kunci Draft (Tolak jika sudah diajukan) |
-| `POST` | `/krs/ajukan` | Ajukan KRS ke Dosen PA | `200 OK` | Minimal 1 MK, Ubah status ke `SUBMITTED` |
-| `POST` | `/krs/reset` | Reset demo data atau simulasi approval | `200 OK` | Reset item, reset total SKS, reset status ke `DRAFT` |
+| `GET` | `/mata-kuliah` | Ambil katalog mata kuliah lengkap | `200 OK` | Cached / Public read |
+| `GET` | `/krs` | Ambil data KRS aktif, total SKS & batas min/max | `200 OK` | Otomatis sinkronisasi beban studi |
+| `POST` | `/krs` | Tambah MK ke draft KRS | `201 Created` | Throttle (60/min), Kunci Draft, Anti-Duplikat, Maks 24 SKS, Anti-Bentrok |
+| `DELETE` | `/krs/{id}` | Hapus MK dari draft KRS | `200 OK` | Throttle (60/min), Kunci Draft |
+| `POST` | `/krs/ajukan` | Ajukan KRS ke Dosen PA | `200 OK` | Throttle (60/min), **Wajib Minimal 12 SKS**, Ubah status ke `SUBMITTED` |
+| `POST` | `/krs/reset` | Reset demo data atau simulasi approval | `200 OK` | Throttle (60/min), Reset draft |

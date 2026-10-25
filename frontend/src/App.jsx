@@ -17,7 +17,8 @@ import {
   Layers,
   Calendar,
   AlertTriangle,
-  Printer
+  Printer,
+  Info
 } from 'lucide-react';
 import { 
   getMataKuliah, 
@@ -81,6 +82,8 @@ export default function App() {
   const takenCourseIds = new Set((krsData?.items || []).map(item => item.course_id));
   const currentTotalCredits = krsData?.total_credits || 0;
   const isLocked = krsData?.status && krsData.status !== 'DRAFT';
+  const minCredits = krsData?.min_credits || 12;
+  const isEligibleToSubmit = currentTotalCredits >= minCredits;
 
   // Helper fungsi untuk mengecek apakah mata kuliah bentrok jadwal dengan yang sudah diambil
   const getConflictCourse = (course) => {
@@ -158,8 +161,8 @@ export default function App() {
 
   // Handler Ajukan KRS
   const handleAjukanKrs = async () => {
-    if ((krsData?.items || []).length === 0) {
-      showToast('Silakan pilih minimal 1 mata kuliah sebelum mengajukan KRS.', 'error');
+    if (currentTotalCredits < minCredits) {
+      showToast(`Belum memenuhi batas minimal 12 SKS (Saat ini: ${currentTotalCredits} SKS).`, 'error');
       return;
     }
 
@@ -536,7 +539,7 @@ export default function App() {
                   <div>{getStatusBadge(krsData?.status)}</div>
                 </div>
 
-                {/* SKS Counter & Progress Bar */}
+                {/* SKS Counter & Progress Bar (Min 12 - Max 24) */}
                 <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200 mb-4">
                   <div className="flex justify-between items-end mb-2">
                     <div>
@@ -545,9 +548,9 @@ export default function App() {
                         <span className={`text-2xl font-extrabold ${
                           currentTotalCredits === 24 
                             ? 'text-emerald-600' 
-                            : currentTotalCredits > 20 
-                            ? 'text-amber-600' 
-                            : 'text-slate-900'
+                            : currentTotalCredits >= 12
+                            ? 'text-indigo-600'
+                            : 'text-amber-600'
                         }`}>
                           {currentTotalCredits}
                         </span>
@@ -556,29 +559,39 @@ export default function App() {
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-bold text-slate-600">
-                        Sisa Kuota: {24 - currentTotalCredits} SKS
+                        {currentTotalCredits < 12 
+                          ? `Kurang ${12 - currentTotalCredits} SKS (Min 12)`
+                          : `Sisa Kuota: ${24 - currentTotalCredits} SKS`}
                       </span>
                     </div>
                   </div>
 
-                  {/* Progress Bar with Color Thresholds */}
-                  <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                  {/* Progress Bar with Min (50% = 12 SKS) Marker */}
+                  <div className="relative w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                     <div
                       className={`h-2.5 rounded-full transition-all duration-300 ${
                         currentTotalCredits === 24
                           ? 'bg-emerald-500'
-                          : currentTotalCredits >= 20
+                          : currentTotalCredits >= 12
                           ? 'bg-indigo-600'
-                          : 'bg-indigo-500'
+                          : 'bg-amber-500'
                       }`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
 
-                  {currentTotalCredits >= 24 && (
-                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-2.5 border border-amber-200 flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      Kapasitas maksimal 24 SKS telah terpenuhi.
+                  {/* Info Regulasi Beban Studi */}
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Info className="w-3.5 h-3.5 text-slate-400" /> Syarat Min: 12 SKS
+                    </span>
+                    <span>Batas Maks: 24 SKS</span>
+                  </div>
+
+                  {currentTotalCredits < 12 && currentTotalCredits > 0 && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-2 border border-amber-200 flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      Minimal 12 SKS untuk dapat diajukan ke Dosen PA.
                     </p>
                   )}
                 </div>
@@ -654,12 +667,13 @@ export default function App() {
                   {krsData?.status === 'DRAFT' ? (
                     <button
                       onClick={handleAjukanKrs}
-                      disabled={isSubmitting || (krsData?.items || []).length === 0}
+                      disabled={isSubmitting || !isEligibleToSubmit}
                       className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
-                        (krsData?.items || []).length === 0
+                        !isEligibleToSubmit
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                           : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 active:scale-98'
                       }`}
+                      title={!isEligibleToSubmit ? `Beban studi minimal 12 SKS (saat ini ${currentTotalCredits} SKS)` : 'Ajukan ke Dosen PA'}
                     >
                       {isSubmitting ? (
                         <>
@@ -669,7 +683,9 @@ export default function App() {
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          Ajukan KRS ke Dosen PA
+                          {currentTotalCredits < 12 
+                            ? `Ajukan KRS (${currentTotalCredits}/12 SKS Min)` 
+                            : 'Ajukan KRS ke Dosen PA'}
                         </>
                       )}
                     </button>
@@ -694,7 +710,7 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Tombol Cetak KRS (Tampil jika sudah diajukan atau disetujui, dan memiliki mata kuliah) */}
+                  {/* Tombol Cetak KRS */}
                   {(krsData?.items || []).length > 0 && (
                     <button
                       onClick={() => setShowPrintModal(true)}
@@ -720,7 +736,7 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-3 mt-auto no-print">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-          Aplikasi Demo Seminar AI-Assisted Fullstack Development &bull; Validasi SKS, Anti-Bentrok Jadwal, & Cetak Slip KRS
+          Aplikasi Demo Seminar AI-Assisted Fullstack Development &bull; Beban Studi 12-24 SKS, Anti-Bentrok Jadwal, & Cetak Slip KRS
         </div>
       </footer>
     </div>
