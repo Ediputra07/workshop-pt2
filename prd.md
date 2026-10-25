@@ -11,6 +11,7 @@
 Aplikasi **Mini KRS Mahasiswa** dirancang khusus untuk demonstrasi alur pengembangan aplikasi fullstack modern berbantuan AI (*AI-assisted fullstack development*). Sistem ini mensimulasikan proses pengisian Kartu Rencana Studi (KRS) mahasiswa dengan fokus pada:
 - Kejelasan arsitektur fullstack dan pemisahan *concern* (Frontend React, Backend API Laravel, Database SQLite).
 - Implementasi *business logic* yang ketat (validasi batas maksimal 24 SKS & deteksi bentrok jadwal).
+- Kelengkapan siklus akademik (pengisian draft -> pengajuan ke PA -> approval -> cetak slip KRS resmi).
 - Kemudahan demonstrasi seminar (tersedia fitur simulasi approval dosen PA dan reset data demo).
 
 ---
@@ -56,6 +57,13 @@ Aplikasi **Mini KRS Mahasiswa** dirancang khusus untuk demonstrasi alur pengemba
   - `[AC-5.3]` Terdapat kontrol demo seminar:
     - **"Simulasi Setujui PA"**: Mengubah status dari `SUBMITTED` menjadi `APPROVED`.
     - **"Reset Demo Data"**: Mengembalikan kondisi KRS mahasiswa ke draft kosong/awal untuk pengujian berulang di panggung seminar.
+
+### F6: Cetak / Export Lembar KRS Resmi (Print to PDF)
+* **Deskripsi**: Mahasiswa dapat melihat preview dan mencetak dokumen sah Kartu Rencana Studi lengkap dengan kop universitas, tabel matakuliah, nomor registrasi dokumen, dan kolom tanda tangan Dosen PA.
+* **Acceptance Criteria**:
+  - `[AC-6.1]` Terdapat tombol **"Cetak Lembar KRS Resmi (PDF)"** yang aktif saat mata kuliah telah terisi/disetujui.
+  - `[AC-6.2]` Menampilkan modal dokumen siap cetak berformat A4 dengan kop resmi kampus dan tanda tangan Dosen PA.
+  - `[AC-6.3]` Menggunakan print stylesheet (`@media print`) sehingga browser mencetak dokumen bersih tanpa navbar atau kontrol dashboard.
 
 ---
 

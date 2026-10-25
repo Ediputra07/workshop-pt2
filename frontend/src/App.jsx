@@ -16,7 +16,8 @@ import {
   Award,
   Layers,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Printer
 } from 'lucide-react';
 import { 
   getMataKuliah, 
@@ -26,6 +27,7 @@ import {
   ajukanKrs, 
   resetDemoKrs 
 } from './services/api';
+import KrsPrintModal from './components/KrsPrintModal';
 
 export default function App() {
   const [courses, setCourses] = useState([]);
@@ -34,6 +36,7 @@ export default function App() {
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,7 +92,7 @@ export default function App() {
       if (item.day && item.day === course.day && item.start_time && item.end_time) {
         const isOverlap = (course.start_time < item.end_time) && (course.end_time > item.start_time);
         if (isOverlap) {
-          return item; // Mengembalikan item yang bentrok
+          return item;
         }
       }
     }
@@ -234,9 +237,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* Modal Cetak KRS Resmi */}
+      {showPrintModal && (
+        <KrsPrintModal 
+          krsData={krsData} 
+          onClose={() => setShowPrintModal(false)} 
+        />
+      )}
+
       {/* Toast Alert */}
       {toast && (
-        <div className="fixed top-5 right-5 z-50 transition-all transform animate-bounce">
+        <div className="fixed top-5 right-5 z-50 transition-all transform animate-bounce no-print">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium ${
             toast.type === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-800'
@@ -250,7 +261,7 @@ export default function App() {
             <span>{toast.message}</span>
             <button 
               onClick={() => setToast(null)}
-              className="ml-2 text-slate-400 hover:text-slate-600 font-bold"
+              className="ml-2 text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
             >
               ✕
             </button>
@@ -259,7 +270,7 @@ export default function App() {
       )}
 
       {/* Header Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs no-print">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-100">
@@ -294,7 +305,7 @@ export default function App() {
                 onClick={() => handleDemoAction('reset')}
                 disabled={isResetting}
                 title="Reset KRS ke Draft Kosong"
-                className="px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-md transition flex items-center gap-1"
+                className="px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-md transition flex items-center gap-1 cursor-pointer"
               >
                 <RefreshCw className={`w-3 h-3 ${isResetting ? 'animate-spin' : ''}`} />
                 Reset Demo
@@ -305,7 +316,7 @@ export default function App() {
                   onClick={() => handleDemoAction('approve')}
                   disabled={isResetting}
                   title="Simulasi Persetujuan Dosen PA"
-                  className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition flex items-center gap-1"
+                  className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition flex items-center gap-1 cursor-pointer"
                 >
                   <Award className="w-3 h-3" />
                   Simulasi Setujui PA
@@ -317,7 +328,7 @@ export default function App() {
                   onClick={() => handleDemoAction('unsubmit')}
                   disabled={isResetting}
                   title="Kembalikan ke Draft"
-                  className="px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md transition flex items-center gap-1"
+                  className="px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md transition flex items-center gap-1 cursor-pointer"
                 >
                   Buka Kunci (Draft)
                 </button>
@@ -328,7 +339,7 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full grow">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full grow no-print">
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
             <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -376,7 +387,7 @@ export default function App() {
                         <button
                           key={sks}
                           onClick={() => setFilterSks(sks)}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
                             filterSks === sks
                               ? 'bg-indigo-600 text-white border-indigo-600'
                               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -393,7 +404,7 @@ export default function App() {
                         <button
                           key={day}
                           onClick={() => setFilterDay(day)}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
                             filterDay === day
                               ? 'bg-indigo-600 text-white border-indigo-600'
                               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -480,7 +491,7 @@ export default function App() {
                               <button
                                 onClick={() => handleAddCourse(course)}
                                 disabled={isDisabled || actionLoadingId === course.id}
-                                className={`w-full sm:w-auto px-3.5 py-1.5 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1 shadow-xs ${
+                                className={`w-full sm:w-auto px-3.5 py-1.5 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1 shadow-xs cursor-pointer ${
                                   isDisabled
                                     ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                                     : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 active:scale-95'
@@ -622,7 +633,7 @@ export default function App() {
                             <button
                               onClick={() => handleDeleteCourse(item.course_id, item.name)}
                               disabled={actionLoadingId === item.course_id}
-                              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition"
+                              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition cursor-pointer"
                               title="Hapus dari KRS"
                             >
                               {actionLoadingId === item.course_id ? (
@@ -638,13 +649,13 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Submission Action */}
-                <div className="border-t border-slate-100 pt-4">
+                {/* Submission & Action Buttons */}
+                <div className="border-t border-slate-100 pt-4 flex flex-col gap-2.5">
                   {krsData?.status === 'DRAFT' ? (
                     <button
                       onClick={handleAjukanKrs}
                       disabled={isSubmitting || (krsData?.items || []).length === 0}
-                      className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                      className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
                         (krsData?.items || []).length === 0
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                           : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 active:scale-98'
@@ -682,6 +693,21 @@ export default function App() {
                       </p>
                     </div>
                   )}
+
+                  {/* Tombol Cetak KRS (Tampil jika sudah diajukan atau disetujui, dan memiliki mata kuliah) */}
+                  {(krsData?.items || []).length > 0 && (
+                    <button
+                      onClick={() => setShowPrintModal(true)}
+                      className={`w-full py-2 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer border ${
+                        krsData?.status === 'APPROVED'
+                          ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-xs'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                      {krsData?.status === 'APPROVED' ? 'Cetak Lembar KRS Resmi (PDF)' : 'Preview Lembar Cetak KRS'}
+                    </button>
+                  )}
                 </div>
 
               </div>
@@ -692,9 +718,9 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-3 mt-auto">
+      <footer className="bg-white border-t border-slate-200 py-3 mt-auto no-print">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-          Aplikasi Demo Seminar AI-Assisted Fullstack Development &bull; Validasi SKS, Anti-Bentrok Jadwal, & Transaksi Database SQLite
+          Aplikasi Demo Seminar AI-Assisted Fullstack Development &bull; Validasi SKS, Anti-Bentrok Jadwal, & Cetak Slip KRS
         </div>
       </footer>
     </div>
